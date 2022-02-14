@@ -1,5 +1,6 @@
 #include "Trajectory_Planning.h"
 #include <iostream>
+#include <time.h>
 
 int main()
 {
@@ -19,7 +20,11 @@ int main()
         printf("Waiting for use to get keyboard intput....\n");
         int trajectory_mode;
         cin >> trajectory_mode;
-
+        
+        double START,END;
+        START = clock();
+        
+        
         switch (trajectory_mode)
         {
 
@@ -60,7 +65,7 @@ int main()
             while (!trajectory_planning_node->Function_EndFlag)
             {
                 trajectory_planning_node->Circle_Plan3D(Center, R, normal_vector, TargetRad, posture_mode);
-                trajectory_planning_node->time_current += SAMPLINGTIME;
+                trajectory_planning_node->time_current += SAMPLINGTIME;                
             }
         }
         break;
@@ -73,6 +78,10 @@ int main()
             break;
 
         }
+        
+        END = clock();
+        printf("time consuming: %.12f\n", (END - START) / CLOCKS_PER_SEC);
+        
         trajectory_planning_node -> save_trajectory_data();
     }
 

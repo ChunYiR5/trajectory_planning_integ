@@ -32,7 +32,7 @@
 #endif
 
 #ifndef SAMPLINGTIME
-#define SAMPLINGTIME	0.05 // UNIT: second (1ms)
+#define SAMPLINGTIME	0.001 // UNIT: second (1ms)
 
 #endif
 

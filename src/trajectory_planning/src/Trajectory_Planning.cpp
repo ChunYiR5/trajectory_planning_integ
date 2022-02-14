@@ -317,7 +317,7 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
 
         /* Get robot initial position(xyz) */
         Vector3d initial_xyz = (kinematicsPtr->GetEndEffectorPose(current_pos)).head(3);
-        
+
         /* Define circle path */
         v_normal = normal_vector / normal_vector.norm();
         Vector3d CP_vector = initial_xyz - Center;
@@ -347,22 +347,33 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
 
                 break;
             }
-            /* ----- 2. Spherical Linear Interpolation ----- */
+            /* ----- 2. Shooting mode (Assign depression angle) ----- */
             case 2:
             {
-                cout << "Please input initial roll(x) angle (degree)....\n";
-                cin >> roll_i;
-                cout << "Please input initial pitch(y) angle (degree)....\n";
-                cin >> pitch_i;
-                cout << "Please input initial yaw(z) angle (degree)....\n";
-                cin >> yaw_i;
-                cout << "Please input target roll(x) angle (degree)....\n";
-                cin >> roll_f;
-                cout << "Please input target pitch(y) angle (degree)....\n";
-                cin >> pitch_f;
-                cout << "Please input target yaw(z) angle (degree)....\n";
-                cin >> yaw_f;
-                Quaterniond qa;
+                cout << "Please input depression angle (degree)....\n";
+                cin >> depression_angle;
+                
+                if (depression_angle > depression_angle_limit){
+                    depression_angle = depression_angle_limit;
+                }
+                else if (depression_angle < 0){
+                    depression_angle = 0;
+                }
+
+                Matrix3d H = (Matrix3d() << -a_normal, b_normal, v_normal).finished();
+                YPR = RotationMatrixToYPR(H); //CK
+
+                Matrix3d R_m;
+                double angle = 90 - depression_angle;
+                angle = DEG2RAD(angle);
+                R_m <<  cos(angle), 0, sin(angle),
+                                 0, 1,          0,
+                       -sin(angle), 0, cos(angle);
+                R = YPRToRotationMatrix(YPR(0), YPR(1), YPR(2));
+                R = R * R_m; //CK
+                for (int i = 0; i < 9; i++){
+                    if(abs(R(i))< 1e-10) R(i) = 0;
+                }
                 break;
             }
             /* ----- 3. Constant normal plane direction posture ----- */
@@ -414,8 +425,13 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
             // cout << iPosture << endl; // C.K.
             break;
         }
-        case 2:
+        case 2: // CK
         {
+            Matrix3d iR;
+            Vector3d iYPR;
+            iR = RotationVector(R, v_normal);
+            iYPR = RotationMatrixToYPR(iR);
+            iPosture = iYPR;
             break;
         }
         case 3:
