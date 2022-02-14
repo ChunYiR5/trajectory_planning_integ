@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>auo_core</name>
+  <version>1.0.0</version>
+  <description>AUORML core library</description>
+  <maintainer email="Sian.SS.Yang@auo.com">MMFA00</maintainer>
+
+  <license>BSD</license>
+  <url type="website">http://</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
+  
+  <depend>eigen</depend>
+  
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
