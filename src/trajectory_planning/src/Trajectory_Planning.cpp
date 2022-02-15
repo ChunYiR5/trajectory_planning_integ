@@ -1,11 +1,4 @@
 #include "Trajectory_Planning.h"
-#include <iostream>
-#include <vector>
-
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-using namespace Eigen;
-using namespace std;
 
 TrajectoryPlanning::TrajectoryPlanning(std::shared_ptr<IDHKinematics> _kinematicsPtr, std::shared_ptr<Constraint> _constraintPtr) : kinematicsPtr(_kinematicsPtr), constraintPtr(_constraintPtr)
 {
@@ -383,6 +376,27 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
                 YPR = RotationMatrixToYPR(H);
                 break;
             }
+            /* ----- 4. Spherical Linear Interpolation ----- */
+            case 4:
+            {
+                cout << "Please input initial ROLL(x) angle (degree)....\n"; // 90
+                cin >> roll_i;
+                cout << "Please input initial PITCH(y) angle (degree)....\n"; // 150
+                cin >> pitch_i;
+                cout << "Please input initial YAW(z) angle (degree)....\n"; // 0
+                cin >> yaw_i;
+                cout << "Please input target ROLL(x) angle (degree)....\n"; // 180
+                cin >> roll_f;
+                cout << "Please input target PITCH(y) angle (degree)....\n"; // 180
+                cin >> pitch_f;
+                cout << "Please input target YAW(z) angle (degree)....\n"; // 90
+                cin >> yaw_f;
+                
+                q_i = AngleAxisd(DEG2RAD(yaw_i), Vector3d::UnitZ()) * AngleAxisd(DEG2RAD(pitch_i), Vector3d::UnitY()) * AngleAxisd(DEG2RAD(roll_i), Vector3d::UnitX());
+                q_f = AngleAxisd(DEG2RAD(yaw_f), Vector3d::UnitZ()) * AngleAxisd(DEG2RAD(pitch_f), Vector3d::UnitY()) * AngleAxisd(DEG2RAD(roll_f), Vector3d::UnitX());
+
+                break;
+            }
             default:
             {
                 /* ----- default : case 3 ----- */
@@ -411,7 +425,7 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
     temp << -sin(iPosCmd(0)) * iAccCmd.array(), cos(iPosCmd(0)) * iAccCmd.array();
     temp2 << cos(iPosCmd(0)) * pow(iVelCmd(0), 2), sin(iPosCmd(0)) * pow(iVelCmd(0), 2);
     X_dotdot = (Radius * ab_matrix) * temp - (Radius * ab_matrix) * temp2; // C.K.
-
+    
     // Get iPosture
     switch (posture_mode)
     {
@@ -438,6 +452,20 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
         {
             iPosture = YPR;
             // cout << iPosture << endl; // C.K.
+            break;
+        }
+        case 4:
+        {
+            double q_t;
+            q_t = iPosCmd(0) / TargetRad;
+            if (time_current == 0.0){
+                q_t = 1e-12;
+            }
+            qres = q_i.slerp(q_t, q_f);
+            Vector3d eulerAngle = qres.matrix().eulerAngles(2,1,0); // YPR
+            iPosture = eulerAngle;
+
+            // if (time_current < 0.1) cout << iPosture.transpose() << endl;
             break;
         }
         default:
