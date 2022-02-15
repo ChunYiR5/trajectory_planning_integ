@@ -7,6 +7,7 @@
 #include "AUORML/Constraint/Constraint.h"
 #include "AUORML/MathLib/RotateComputation.h"
 
+#include <iostream>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <list>
@@ -76,7 +77,10 @@ private:
     const double depression_angle_limit = 45;
     // case 3 //
     Vector3d YPR;
-    
+    // case 4 //
+    double roll_i, pitch_i, yaw_i, roll_f, pitch_f, yaw_f;
+    Quaterniond q_i, q_f, qres;
+
     /*--- for modify posture variable ---*/
     Vector3d iPosture;
     Vector3d pass_pos_diff , pass_vel_diff , pass_jointcmd_diff;

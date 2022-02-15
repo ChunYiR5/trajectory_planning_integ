@@ -60,7 +60,7 @@ int main()
             double R = 80;
             Vector3d normal_vector = (Vector3d(3) << 0, 0, -1).finished();
             double TargetRad = 2 * PI;
-            int posture_mode = 1;
+            int posture_mode = 4;
 
             while (!trajectory_planning_node->Function_EndFlag)
             {
