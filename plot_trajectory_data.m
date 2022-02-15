@@ -2,7 +2,7 @@
 close all; clear; clc;
 
 %% cd path
-path =  'C:\Users\user\Desktop\trajectory_planning_ws';
+path = 'C:\Users\B1040\Desktop\trajectory_planning_integ';
 cd(path)
 
 %% Load data
@@ -17,8 +17,6 @@ JointAccCmd = textread("JointAccCmd_list.txt");
 %% lebel
 CarLabel = {'X', 'Y', 'Z', 'Yaw(z)', 'Pitch(y)', 'Roll(x)'};
 JointLabel = {'Joint 1', 'Joint 2', 'Joint 3', 'Joint 4', 'Joint 5', 'Joint 6'};
-
-
 
 %% plot CarPosCmd
 figure('Name' , 'Cartesian Position Cmd'),
