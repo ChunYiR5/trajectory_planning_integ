@@ -1,4 +1,5 @@
 #include "Trajectory_Planning.h"
+#define DEBUG_MODE_SWITCH 1
 
 TrajectoryPlanning::TrajectoryPlanning(std::shared_ptr<IDHKinematics> _kinematicsPtr, std::shared_ptr<Constraint> _constraintPtr) : kinematicsPtr(_kinematicsPtr), constraintPtr(_constraintPtr)
 {
@@ -20,17 +21,29 @@ void TrajectoryPlanning::Print_instruction(void)
     printf("========================================================\n");
 }
 
-void TrajectoryPlanning::Initialization(void){
-    CarPosCmd_list.clear();
-    CarVelCmd_list.clear();
-    CarAccCmd_list.clear();
-    JointPosCmd_list.clear();
-    JointVelCmd_list.clear();
-    JointAccCmd_list.clear();
-    TBase_list.clear();
-    time_current = 0.0;
-    Function_EndFlag = false;
-    currentJoint = MatrixXd::Zero(AXIS, 1);
+void TrajectoryPlanning::Initialization(int trajectory_mode){
+    switch (trajectory_mode)
+    {
+        case TRAJECTORY_PLANNING_MODE_PTP:
+        case TRAJECTORY_PLANNING_MODE_LINE:
+        case TRAJECTORY_PLANNING_MODE_CIRCLE:
+        {
+            printf("Initialization Done...\n");
+            CarPosCmd_list.clear();
+            CarVelCmd_list.clear();
+            CarAccCmd_list.clear();
+            JointPosCmd_list.clear();
+            JointVelCmd_list.clear();
+            JointAccCmd_list.clear();
+            TBase_list.clear();
+            time_current = 0.0;
+            Function_EndFlag = false;
+            currentJoint = MatrixXd::Zero(AXIS, 1);
+            break;
+        }
+
+    }
+
 }
 
 void TrajectoryPlanning::Scurve(VectorXd joints_i, VectorXd joints_f, int mode)
@@ -302,6 +315,26 @@ void TrajectoryPlanning::Scurve_sp(VectorXd joints_i, VectorXd joints_f, int mod
 
 }
 
+
+/*
+* @brief:
+* Implement trajectory planning of 3D circle path
+* 
+* @param normal_vector:
+* Normal vector of circle trajectory plane
+*
+* @param TargetRad:
+* Central angle of planning circle. e.g., 2*pi is "one" turn of circles.
+*
+* @param posture_mode
+* posture planning mode of robot end effector.
+*   1. Posture rotate along constant axis
+*   2. Shooting mode by assign depression angle
+*   3. Constant normal plane direction posture
+*   4. Spherical linear interpolation
+* 
+*/
+
 void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d normal_vector, double TargetRad, int posture_mode)
 {
 
@@ -397,7 +430,7 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
 
                 break;
             }
-            default:
+            default: // debug 
             {
                 /* ----- default : case 3 ----- */
                 Matrix3d H = (Matrix3d() << a_normal, b_normal, v_normal).finished();
@@ -426,6 +459,7 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
     temp2 << cos(iPosCmd(0)) * pow(iVelCmd(0), 2), sin(iPosCmd(0)) * pow(iVelCmd(0), 2);
     X_dotdot = (Radius * ab_matrix) * temp - (Radius * ab_matrix) * temp2; // C.K.
     
+
     // Get iPosture
     switch (posture_mode)
     {
@@ -833,4 +867,3 @@ Matrix3d TrajectoryPlanning::GetTfiMatrixDot(double pit, double yaw, double roll
 
     return T;
 }
-

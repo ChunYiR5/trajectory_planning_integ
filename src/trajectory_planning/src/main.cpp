@@ -15,12 +15,13 @@ int main()
     while (true)
     {
 
-        trajectory_planning_node->Initialization();
 
         printf("Waiting for use to get keyboard intput....\n");
         int trajectory_mode;
         cin >> trajectory_mode;
         
+        trajectory_planning_node->Initialization( trajectory_mode );
+
         double START,END;
         START = clock();
         

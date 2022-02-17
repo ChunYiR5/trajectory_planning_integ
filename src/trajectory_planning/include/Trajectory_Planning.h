@@ -1,6 +1,9 @@
 #ifndef __TRAJECTORY_PLANNING__
 #define __TRAJECTORY_PLANNING__
 
+#define TRAJECTORY_PLANNING_MODE_PTP 1
+#define TRAJECTORY_PLANNING_MODE_LINE 2
+#define TRAJECTORY_PLANNING_MODE_CIRCLE 3
 
 #include "AUORML/Dynamics/Dynamics.h"
 #include "AUORML/Kinematics/Kinematics.h"
@@ -26,10 +29,11 @@ public:
     const std::shared_ptr<IDHKinematics> GetKinematicsPtr(void) const;
     
     void Print_instruction(void);
-    void Initialization(void);
+    void Initialization(int trajectory_mode);
     void Scurve(VectorXd joints_i , VectorXd joints_f, int mode);
     void Scurve_sp(VectorXd joints_i, VectorXd joints_f, int mode);
     void Circle_Plan3D(Vector3d Center, double Radius, Vector3d normal_vector, double TargetRad, int posture_mode);
+    void Circle_posture_setup(int posture_mode);
     void PTPLine_Plan(Matrix<double, 6, 1> InitialPosition, Matrix<double, 6, 1> TargetPosition);
     void PTPPlan(Matrix<double, 6, 1> InitialJoints, Matrix<double, 6, 1> TargetJoints);
     void save_trajectory_data(void);
