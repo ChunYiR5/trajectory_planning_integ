@@ -4,8 +4,10 @@ CarVelCmd_list.txt
 JointAccCmd_list.txt
 JointPosCmd_list.txt
 JointVelCmd_list.txt
+t.txt
 plot_trajectory_data.m
 run.txt
+
 *.vscode
 build
 install
