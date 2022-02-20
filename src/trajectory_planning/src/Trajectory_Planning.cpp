@@ -7,6 +7,7 @@ TrajectoryPlanning::TrajectoryPlanning(std::shared_ptr<IDHKinematics> _kinematic
     constraintPtr->GetHardCartVelBound(CartVelBound);
     constraintPtr->GetHardCartAccBound(CartAccBound);
     constraintPtr->GetHardCartJerkBound(CartJerkBound);
+    
 
 }
 
@@ -24,9 +25,9 @@ void TrajectoryPlanning::Print_instruction(void)
 void TrajectoryPlanning::Initialization(int trajectory_mode){
     switch (trajectory_mode)
     {
-        case TRAJECTORY_PLANNING_MODE_PTP:
-        case TRAJECTORY_PLANNING_MODE_LINE:
-        case TRAJECTORY_PLANNING_MODE_CIRCLE:
+        case TRAJECTORY_PLANNING_MODE_PTP: // 1
+        case TRAJECTORY_PLANNING_MODE_LINE: // 2
+        case TRAJECTORY_PLANNING_MODE_CIRCLE: // 3
         {
             printf("Initialization Done...\n");
             CarPosCmd_list.clear();
@@ -315,152 +316,80 @@ void TrajectoryPlanning::Scurve_sp(VectorXd joints_i, VectorXd joints_f, int mod
 
 }
 
-
-/*
-* @brief:
-* Implement trajectory planning of 3D circle path
-* 
-* @param normal_vector:
-* Normal vector of circle trajectory plane
-*
-* @param TargetRad:
-* Central angle of planning circle. e.g., 2*pi is "one" turn of circles.
-*
-* @param posture_mode
-* posture planning mode of robot end effector.
-*   1. Posture rotate along constant axis
-*   2. Shooting mode by assign depression angle
-*   3. Constant normal plane direction posture
-*   4. Spherical linear interpolation
-* 
-*/
-
-void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d normal_vector, double TargetRad, int posture_mode)
-{
-
-    if (time_current == 0)
+void TrajectoryPlanning::Circle_posture_setup(int posture_mode){
+    
+    switch (posture_mode)
     {
-
-        /* Get robot initial position(xyz) */
-        Vector3d initial_xyz = (kinematicsPtr->GetEndEffectorPose(current_pos)).head(3);
-
-        /* Define circle path */
-        v_normal = normal_vector / normal_vector.norm();
-        Vector3d CP_vector = initial_xyz - Center;
-        /*in eigen .dot is dot product*/
-        Vector3d CQ_vector = CP_vector - v_normal.dot(CP_vector) * v_normal;
-        /* K is Shortest distance point from EEF in the circle path */
-        Vector3d K = Center + Radius * CQ_vector / CQ_vector.norm();
-        Vector3d a = K - Center;
-        Vector3d a_normal = a / a.norm();
-        Vector3d b_normal = v_normal.cross(a_normal);
-
-        ab_matrix << a_normal, b_normal; // 3*2
-
-        switch (posture_mode)
+        /* ----- 1. Posture rotate along constant axis ----- */
+        case 1:
         {
-            /* ----- 1. Posture rotate along constant axis ----- */
-            case 1:
-            {
-                cout << "Please input roll(x) angle (degree)....\n"; //0
-                cin >> roll;
-                cout << "Please input pitch(y) angle (degree)....\n"; //150
-                cin >> pitch;
-                cout << "Please input yaw(z) angle (degree)....\n"; //150
-                cin >> yaw;
+            printf("Circle posture Mode 1 : Posture rotate along constant axis.\n");
+            printf("Please input initial posture.\n");
+            
+            cout << "Please input roll(x) angle (degree)....\n"; //0
+            cin >> roll;
+            cout << "Please input pitch(y) angle (degree)....\n"; //150
+            cin >> pitch;
+            cout << "Please input yaw(z) angle (degree)....\n"; //150
+            cin >> yaw;
 
-                R_initial = YPRToRotationMatrix(DEG2RAD(yaw), DEG2RAD(pitch), DEG2RAD(roll)); // check ok.
-
-                break;
-            }
-            /* ----- 2. Shooting mode (Assign depression angle) ----- */
-            case 2:
-            {
-                cout << "Please input depression angle (degree)....\n";
-                cin >> depression_angle;
-                
-                if (depression_angle > depression_angle_limit){
-                    depression_angle = depression_angle_limit;
-                }
-                else if (depression_angle < 0){
-                    depression_angle = 0;
-                }
-
-                Matrix3d H = (Matrix3d() << -a_normal, b_normal, v_normal).finished();
-                YPR = RotationMatrixToYPR(H); //CK
-
-                Matrix3d R_m;
-                double angle = 90 - depression_angle;
-                angle = DEG2RAD(angle);
-                R_m <<  cos(angle), 0, sin(angle),
-                                 0, 1,          0,
-                       -sin(angle), 0, cos(angle);
-                R = YPRToRotationMatrix(YPR(0), YPR(1), YPR(2));
-                R = R * R_m; //CK
-                for (int i = 0; i < 9; i++){
-                    if(abs(R(i))< 1e-10) R(i) = 0;
-                }
-                break;
-            }
-            /* ----- 3. Constant normal plane direction posture ----- */
-            case 3:
-            {
-                Matrix3d H = (Matrix3d() << a_normal, b_normal, v_normal).finished();
-                YPR = RotationMatrixToYPR(H);
-                break;
-            }
-            /* ----- 4. Spherical Linear Interpolation ----- */
-            case 4:
-            {
-                cout << "Please input initial ROLL(x) angle (degree)....\n"; // 90
-                cin >> roll_i;
-                cout << "Please input initial PITCH(y) angle (degree)....\n"; // 150
-                cin >> pitch_i;
-                cout << "Please input initial YAW(z) angle (degree)....\n"; // 0
-                cin >> yaw_i;
-                cout << "Please input target ROLL(x) angle (degree)....\n"; // 180
-                cin >> roll_f;
-                cout << "Please input target PITCH(y) angle (degree)....\n"; // 180
-                cin >> pitch_f;
-                cout << "Please input target YAW(z) angle (degree)....\n"; // 90
-                cin >> yaw_f;
-                
-                q_i = AngleAxisd(DEG2RAD(yaw_i), Vector3d::UnitZ()) * AngleAxisd(DEG2RAD(pitch_i), Vector3d::UnitY()) * AngleAxisd(DEG2RAD(roll_i), Vector3d::UnitX());
-                q_f = AngleAxisd(DEG2RAD(yaw_f), Vector3d::UnitZ()) * AngleAxisd(DEG2RAD(pitch_f), Vector3d::UnitY()) * AngleAxisd(DEG2RAD(roll_f), Vector3d::UnitX());
-
-                break;
-            }
-            default: // debug 
-            {
-                /* ----- default : case 3 ----- */
-                Matrix3d H = (Matrix3d() << a_normal, b_normal, v_normal).finished();
-                YPR = RotationMatrixToYPR(H);
-                break;
-            }
+            break;
         }
-    
-    
+        /* ----- 2. Shooting mode (Assign depression angle) ----- */
+        case 2:
+        {
+            printf("Circle posture Mode 2 : Shooting mode (Assign depression angle).\n");
+
+            cout << "Please input depression angle (degree)....\n";
+            cin >> depression_angle;
+            
+            if (depression_angle > depression_angle_limit){
+                depression_angle = depression_angle_limit;
+            }
+            else if (depression_angle < 0){
+                depression_angle = 0;
+            }
+
+            break;
+        }
+        /* ----- 3. Constant normal plane direction posture ----- */
+        case 3:
+        {
+            printf("Circle posture Mode 3 : Constant normal plane direction posture.\n");
+            break;
+        }
+        /* ----- 4. Spherical Linear Interpolation ----- */
+        case 4:
+        {
+            printf("Circle posture Mode 4 : Spherical Linear Interpolation.\n");
+
+            cout << "Please input initial ROLL(x) angle (degree)....\n"; // 90
+            cin >> roll_i;
+            cout << "Please input initial PITCH(y) angle (degree)....\n"; // 150
+            cin >> pitch_i;
+            cout << "Please input initial YAW(z) angle (degree)....\n"; // 0
+            cin >> yaw_i;
+            cout << "Please input target ROLL(x) angle (degree)....\n"; // 180
+            cin >> roll_f;
+            cout << "Please input target PITCH(y) angle (degree)....\n"; // 180
+            cin >> pitch_f;
+            cout << "Please input target YAW(z) angle (degree)....\n"; // 90
+            cin >> yaw_f;
+            break;
+        }
+        default:
+        {
+            printf("Error input !!!\n");
+            return;
+        }
     }
 
-    // Get iPosCmd / iVelCmd / iAccCmd
-    VectorXd Scurve_initial = (VectorXd(1) << 0).finished();
-    VectorXd Scurve_target = (VectorXd(1) << TargetRad).finished();
-    Scurve_sp(Scurve_initial, Scurve_target, 2); // C.K.
+}
 
-
-    VectorXd X(3), X_dot(3), X_dotdot(3), temp(2), temp2(2);
-    temp << cos(iPosCmd(0)), sin(iPosCmd(0));
-    X = Center + (Radius * ab_matrix) * temp; // C.K.
-
-    temp << -sin(iPosCmd(0)) * iVelCmd(0), cos(iPosCmd(0)) * iVelCmd(0);
-    X_dot = (Radius * ab_matrix) * temp; // C.K.
-
-    temp << -sin(iPosCmd(0)) * iAccCmd.array(), cos(iPosCmd(0)) * iAccCmd.array();
-    temp2 << cos(iPosCmd(0)) * pow(iVelCmd(0), 2), sin(iPosCmd(0)) * pow(iVelCmd(0), 2);
-    X_dotdot = (Radius * ab_matrix) * temp - (Radius * ab_matrix) * temp2; // C.K.
+Vector3d TrajectoryPlanning::Get_circle_posture(int posture_mode , double TargetRad){
     
+    Vector3d iPosture;
 
-    // Get iPosture
     switch (posture_mode)
     {
         case 1:
@@ -502,12 +431,119 @@ void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d 
             // if (time_current < 0.1) cout << iPosture.transpose() << endl;
             break;
         }
-        default:
-        {
-            iPosture = YPR;
-            break;
-        }
     }
+
+    return iPosture;
+}
+
+
+/*
+* @brief:
+* Implement trajectory planning of 3D circle path
+* 
+* @param normal_vector:
+* Normal vector of circle trajectory plane
+*
+* @param TargetRad:
+* Central angle of planning circle. e.g., 2*pi is "one" turn of circles.
+*
+* @param posture_mode
+* posture planning mode of robot end effector.
+*   1. Posture rotate along constant axis
+*   2. Shooting mode by assign depression angle
+*   3. Constant normal plane direction posture
+*   4. Spherical linear interpolation
+* 
+*/
+void TrajectoryPlanning::Circle_Plan3D(Vector3d Center, double Radius, Vector3d normal_vector, double TargetRad, int posture_mode)
+{
+
+    if (time_current == 0)
+    {
+
+        /* Get robot initial position(xyz) */
+        Vector3d initial_xyz = (kinematicsPtr->GetEndEffectorPose(current_pos)).head(3);
+
+        /* ----- Define circle path ----- */
+        v_normal = normal_vector / normal_vector.norm();
+        Vector3d CP_vector = initial_xyz - Center;
+        /* in eigen .dot is dot product */
+        Vector3d CQ_vector = CP_vector - v_normal.dot(CP_vector) * v_normal;
+        /* K is Shortest distance point from EEF in the circle path */
+        Vector3d K = Center + Radius * CQ_vector / CQ_vector.norm();
+        Vector3d a = K - Center;
+        Vector3d a_normal = a / a.norm();
+        Vector3d b_normal = v_normal.cross(a_normal);
+
+        ab_matrix << a_normal, b_normal;
+
+        /* ----- posture initial parameter setup ----- */
+        switch (posture_mode)
+        {
+            /* ----- 1. Posture rotate along constant axis ----- */
+            case 1:
+            {
+                R_initial = YPRToRotationMatrix(DEG2RAD(yaw), DEG2RAD(pitch), DEG2RAD(roll)); // check ok.
+                break;
+            }
+            /* ----- 2. Shooting mode (Assign depression angle) ----- */
+            case 2:
+            {
+                Matrix3d H = (Matrix3d() << -a_normal, b_normal, v_normal).finished();
+                YPR = RotationMatrixToYPR(H); //CK
+
+                Matrix3d R_m;
+                double angle = 90 - depression_angle;
+                angle = DEG2RAD(angle);
+                R_m <<  cos(angle), 0, sin(angle),
+                                 0, 1,          0,
+                       -sin(angle), 0, cos(angle);
+                R = YPRToRotationMatrix(YPR(0), YPR(1), YPR(2));
+                R = R * R_m; //CK
+                for (int i = 0; i < 9; i++){
+                    if(abs(R(i))< 1e-10) R(i) = 0;
+                }
+                break;
+            }
+            /* ----- 3. Constant normal plane direction posture ----- */
+            case 3:
+            {
+                Matrix3d H = (Matrix3d() << a_normal, b_normal, v_normal).finished();
+                YPR = RotationMatrixToYPR(H);
+                break;
+            }
+            /* ----- 4. Spherical Linear Interpolation ----- */
+            case 4:
+            {
+                q_i = AngleAxisd(DEG2RAD(yaw_i), Vector3d::UnitZ()) * AngleAxisd(DEG2RAD(pitch_i), Vector3d::UnitY()) * AngleAxisd(DEG2RAD(roll_i), Vector3d::UnitX());
+                q_f = AngleAxisd(DEG2RAD(yaw_f), Vector3d::UnitZ()) * AngleAxisd(DEG2RAD(pitch_f), Vector3d::UnitY()) * AngleAxisd(DEG2RAD(roll_f), Vector3d::UnitX());
+                break;
+            }
+        }
+    
+    }
+
+    // Get iPosCmd / iVelCmd / iAccCmd
+    VectorXd Scurve_initial = (VectorXd(1) << 0).finished();
+    VectorXd Scurve_target = (VectorXd(1) << TargetRad).finished();
+    Scurve_sp(Scurve_initial, Scurve_target, 2); // C.K.
+
+    
+    VectorXd X(3), X_dot(3), X_dotdot(3), temp(2), temp2(2);
+    temp << cos(iPosCmd(0)), sin(iPosCmd(0));
+    X = Center + (Radius * ab_matrix) * temp; // C.K.
+
+    temp << -sin(iPosCmd(0)) * iVelCmd(0), cos(iPosCmd(0)) * iVelCmd(0);
+    X_dot = (Radius * ab_matrix) * temp; // C.K.
+
+    temp << -sin(iPosCmd(0)) * iAccCmd.array(), cos(iPosCmd(0)) * iAccCmd.array();
+    temp2 << cos(iPosCmd(0)) * pow(iVelCmd(0), 2), sin(iPosCmd(0)) * pow(iVelCmd(0), 2);
+    X_dotdot = (Radius * ab_matrix) * temp - (Radius * ab_matrix) * temp2; // C.K.
+    
+
+    Vector3d iPosture;
+    iPosture = Get_circle_posture(posture_mode , TargetRad);
+
 
     /* ----- joint trajectory -----*/
     CarPosCmd << X, iPosture; // CK.
@@ -768,65 +804,18 @@ void TrajectoryPlanning::save_trajectory_data(){
     }
     ofs.close();
 
-    ofs.open("CarPosCmd_list.txt");
-    for (auto n : CarPosCmd_list){
-        for (int idata = 0; idata < AXIS; idata++){
-            ofs << n(idata);
-            if (idata < AXIS-1) ofs << "\t";
+    for (int i_RecordData = 0; i_RecordData < 6; i_RecordData++)
+    {
+        ofs.open(record_data_name[i_RecordData]);
+        for (auto n : record_data_list[i_RecordData]){
+            for (int idata = 0; idata < AXIS; idata++){
+                ofs << n(idata);
+                if (idata < AXIS-1) ofs << "\t";
+            }
+            ofs << "\n";
         }
-        ofs << "\n";
+        ofs.close();
     }
-    ofs.close();
-
-    ofs.open("JointPosCmd_list.txt");
-    for (auto n : JointPosCmd_list){
-        for (int idata = 0; idata < AXIS; idata++){
-            ofs << n(idata);
-            if (idata < AXIS-1) ofs << "\t";
-        }
-        ofs << "\n";
-    }
-    ofs.close();
-
-    ofs.open("CarVelCmd_list.txt");
-    for (auto n : CarVelCmd_list){
-        for (int idata = 0; idata < AXIS; idata++){
-            ofs << n(idata);
-            if (idata < AXIS-1) ofs << "\t";
-        }
-        ofs << "\n";
-    }
-    ofs.close();
-
-    ofs.open("JointVelCmd_list.txt");
-    for (auto n : JointVelCmd_list){
-        for (int idata = 0; idata < AXIS; idata++){
-            ofs << n(idata);
-            if (idata < AXIS-1) ofs << "\t";
-        }
-        ofs << "\n";
-    }
-    ofs.close();
-    
-    ofs.open("CarAccCmd_list.txt");
-    for (auto n : CarAccCmd_list){
-        for (int idata = 0; idata < AXIS; idata++){
-            ofs << n(idata);
-            if (idata < AXIS-1) ofs << "\t";
-        }
-        ofs << "\n";
-    }
-    ofs.close();
-    
-    ofs.open("JointAccCmd_list.txt");
-    for (auto n : JointAccCmd_list){
-        for (int idata = 0; idata < AXIS; idata++){
-            ofs << n(idata);
-            if (idata < AXIS-1) ofs << "\t";
-        }
-        ofs << "\n";
-    }
-    ofs.close();
 
 }
 

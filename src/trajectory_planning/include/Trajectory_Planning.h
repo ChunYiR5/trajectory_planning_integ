@@ -14,6 +14,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <list>
+#include <string>
 
 using namespace std;
 using namespace Eigen;
@@ -34,6 +35,7 @@ public:
     void Scurve_sp(VectorXd joints_i, VectorXd joints_f, int mode);
     void Circle_Plan3D(Vector3d Center, double Radius, Vector3d normal_vector, double TargetRad, int posture_mode);
     void Circle_posture_setup(int posture_mode);
+    Vector3d Get_circle_posture(int posture_mode, double TargetRad);
     void PTPLine_Plan(Matrix<double, 6, 1> InitialPosition, Matrix<double, 6, 1> TargetPosition);
     void PTPPlan(Matrix<double, 6, 1> InitialJoints, Matrix<double, 6, 1> TargetJoints);
     void save_trajectory_data(void);
@@ -86,7 +88,6 @@ private:
     Quaterniond q_i, q_f, qres;
 
     /*--- for modify posture variable ---*/
-    Vector3d iPosture;
     Vector3d pass_pos_diff , pass_vel_diff , pass_jointcmd_diff;
     Vector3d past_posture_pos , past_posture_vel , past_joint456_cmd;
     Vector3d sum_joint456_diff;
@@ -94,6 +95,10 @@ private:
     /*--- Data record ---*/
     list<Matrix<double, AXIS, 1>> CarPosCmd_list, CarVelCmd_list, CarAccCmd_list;
     list<Matrix<double, AXIS, 1>> JointPosCmd_list, JointVelCmd_list, JointAccCmd_list;
+    string record_data_name[6] = {"CarPosCmd_list.txt", "CarVelCmd_list.txt", "CarAccCmd_list.txt",
+                                  "JointPosCmd_list.txt", "JointVelCmd_list.txt", "JointAccCmd_list.txt"};
+    list<Matrix<double, AXIS, 1>> record_data_list[6] = {CarPosCmd_list, CarVelCmd_list, CarAccCmd_list,
+                                                         JointPosCmd_list, JointPosCmd_list, JointAccCmd_list};
 
     /*--- function ---*/
     Matrix3d RotationVector(Matrix3d RotationM, Vector3d Axis);

@@ -1,5 +1,4 @@
 #include "Trajectory_Planning.h"
-#include <iostream>
 #include <time.h>
 
 int main()
@@ -14,7 +13,6 @@ int main()
 
     while (true)
     {
-
 
         printf("Waiting for use to get keyboard intput....\n");
         int trajectory_mode;
@@ -44,6 +42,7 @@ int main()
         break;
         case 2: // Line mode
         {
+
             Matrix<double, 6, 1> InitialPosition, TargetPosition;
             InitialPosition << 500, -200, 420, PI, PI, -DEG2RAD(30); // xyz yaw(z) pitch(y) roll(x)
             TargetPosition << 500, 200, 420, PI, PI, DEG2RAD(30); // xyz yaw(z) pitch(y) roll(x)
@@ -62,6 +61,8 @@ int main()
             Vector3d normal_vector = (Vector3d(3) << 0, 0, -1).finished();
             double TargetRad = 2 * PI;
             int posture_mode = 4;
+
+            trajectory_planning_node->Circle_posture_setup(posture_mode);
 
             while (!trajectory_planning_node->Function_EndFlag)
             {
